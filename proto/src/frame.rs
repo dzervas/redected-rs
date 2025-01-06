@@ -43,11 +43,41 @@ impl BusMail {
 		};
 		let checksum = *bytes.last().unwrap();
 
-		Ok(BusMail {
+		let busmail = BusMail {
 			header,
 			length,
 			data,
 			checksum,
-		})
+		};
+
+		if busmail.calc_checksum() != checksum {
+			return Err("Checksum error".to_string());
+		}
+
+		Ok(busmail)
+	}
+
+	pub fn to_bytes(&self) -> Vec<u8> {
+		let mut bytes = Vec::new();
+		bytes.push(0x10);
+		bytes.extend(self.length.to_be_bytes());
+		bytes.push(self.header.to_byte());
+		if let Some(data) = &self.data {
+			bytes.extend(data.to_bytes());
+		}
+		bytes.push(self.checksum);
+
+		bytes
+	}
+
+	pub fn calc_checksum(&self) -> u8 {
+		let mut checksum = self.header.to_byte();
+		if let Some(data) = &self.data {
+			for byte in data.to_bytes() {
+				checksum = checksum.wrapping_add(byte);
+			}
+		}
+
+		checksum
 	}
 }

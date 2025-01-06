@@ -23,5 +23,6 @@ mod tests {
         assert_eq!(mail.length, 0x01);
         assert_eq!(mail.data, None);
         assert_eq!(mail.checksum, 0xC8);
+        assert_eq!(mail.to_bytes(), data);
     }
 }
