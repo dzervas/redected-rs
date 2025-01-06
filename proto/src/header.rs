@@ -8,10 +8,10 @@ pub struct FrameHeader {
 
 impl FrameHeader {
 	pub fn from_byte(byte: u8) -> FrameHeader {
-		let frame_type = match byte & 0b1000_0000 {
-			0 => FrameType::Information,
-			1 => FrameType::Control,
-			_ => panic!("Invalid frame type"),
+		let frame_type = if byte & 0b1000_0000 == 0 {
+			FrameType::Information
+		} else {
+			FrameType::Control
 		};
 
 		let poll_final = (byte & 0b0010_0000) != 0;
