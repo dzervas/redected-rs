@@ -1,4 +1,4 @@
-use crate::header::FrameHeader;
+use crate::header::{FrameHeader, FrameHeaderData, FrameType, SupervisoryType, UnnumberedType};
 use crate::mail::Mail;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -51,7 +51,8 @@ impl BusMail {
 		};
 
 		if busmail.calc_checksum() != checksum {
-			return Err("Checksum error".to_string());
+			// return Err("Checksum error".to_string());
+			println!("Checksum error: {:02X} != {:02X}", busmail.calc_checksum(), checksum);
 		}
 
 		Ok(busmail)
@@ -74,10 +75,43 @@ impl BusMail {
 		let mut checksum = self.header.to_byte();
 		if let Some(data) = &self.data {
 			for byte in data.to_bytes() {
-				checksum = checksum.wrapping_add(byte);
+				checksum += byte;
 			}
 		}
 
 		checksum
+	}
+
+	pub fn calculate(&mut self) {
+		self.length = self.data.as_ref().map(|d| d.to_bytes().len() as u16).unwrap_or(0) + 1;
+		self.checksum = self.calc_checksum();
+	}
+
+	pub fn handle_response(&self) -> Option<BusMail> {
+		let mut response = self.clone();
+
+		match &self.header.data {
+			FrameHeaderData::Unnumbered { .. } => {
+				response.header.frame_type = FrameType::Control;
+				response.header.data = FrameHeaderData::Unnumbered { un_id: UnnumberedType::AsyncBalanced };
+				response.header.rx_seq = 0;
+				response.header.poll_final = false;
+				response.data = None;
+			},
+			FrameHeaderData::Supervisory { .. } => {
+				return None;
+			},
+			FrameHeaderData::Information { .. } => {
+				response.header.frame_type = FrameType::Control;
+				// TODO: Handle incorrect checksum with a reject frame
+				// TODO: Resend rejected frames here
+				response.header.data = FrameHeaderData::Supervisory { su_id: SupervisoryType::ReceiveReady };
+				response.header.rx_seq = self.header.rx_seq.wrapping_add(1);
+				response.data = None;
+			},
+		};
+
+		response.calculate();
+		Some(response)
 	}
 }

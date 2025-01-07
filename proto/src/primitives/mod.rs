@@ -32,6 +32,27 @@ macro_rules! primitive_enum {
 			}
 		}
 
+		impl From<u16> for PrimitiveID {
+			fn from(value: u16) -> Self {
+				match value {
+					$(
+						$value => PrimitiveID::$variant,
+					)*
+					_ => panic!("Invalid PrimitiveID: {}", value),
+				}
+			}
+		}
+
+		impl Into<u16> for PrimitiveID {
+			fn into(self) -> u16 {
+				match self {
+					$(
+						PrimitiveID::$variant => $value,
+					)*
+				}
+			}
+		}
+
 		impl From<PrimitiveParameter> for PrimitiveID {
 			fn from(primitive_parameter: PrimitiveParameter) -> Self {
 				match primitive_parameter {
